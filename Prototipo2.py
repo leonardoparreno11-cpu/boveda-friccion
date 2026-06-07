@@ -1,5 +1,6 @@
 import streamlit as st
 from datetime import datetime, timedelta
+import time  # Necesario para crear la cuenta regresiva en tiempo real
 
 # Configuración de la página
 st.set_page_config(page_title="Bóveda de Fricción Cognitiva V2", layout="centered")
@@ -16,14 +17,11 @@ if 'racha_ahorro' not in st.session_state:
 if 'bloqueo_hasta' not in st.session_state:
     st.session_state.bloqueo_hasta = None
 
-# Comprobación de la penalización de tiempo (Time-out)
+# Comprobación inicial del estado de bloqueo
 ahora = datetime.now()
 esta_bloqueado = False
 if st.session_state.bloqueo_hasta and ahora < st.session_state.bloqueo_hasta:
     esta_bloqueado = True
-    tiempo_restante = st.session_state.bloqueo_hasta - ahora
-    minutos = int(tiempo_restante.total_seconds() // 60)
-    segundos = int(tiempo_restante.total_seconds() % 60)
 
 # Interfaz Principal
 st.title("🛡️ Bóveda de Fricción Cognitiva")
@@ -41,12 +39,27 @@ st.divider()
 
 # Control de flujo según el estado de bloqueo
 if esta_bloqueado:
-    st.error(f"⛔ SISTEMA BLOQUEADO. Debido a un ingreso erróneo en el Candado Académico, tu bóveda está inhabilitada para proteger tu capital.")
-    st.warning(f"⏳ Tiempo de fricción restante: {minutos} minutos con {segundos} segundos.")
-    if st.button("Actualizar tiempo"):
-        st.rerun()
+    st.error("⛔ SISTEMA BLOQUEADO. Debido a un ingreso erróneo en el Candado Académico, tu bóveda está inhabilitada para proteger tu capital.")
+    
+    # Contenedor vacío que permitirá actualizar el texto dinámicamente
+    reloj_placeholder = st.empty()
+    
+    # Bucle que actualiza el temporizador visualmente cada segundo
+    while datetime.now() < st.session_state.bloqueo_hasta:
+        tiempo_restante = st.session_state.bloqueo_hasta - datetime.now()
+        minutos = int(tiempo_restante.total_seconds() // 60)
+        segundos = int(tiempo_restante.total_seconds() % 60)
+        
+        # Sobrescribir el mensaje en el contenedor con el tiempo exacto
+        reloj_placeholder.warning(f"⏳ Tiempo de fricción restante: {minutos:02d} minutos con {segundos:02d} segundos.")
+        time.sleep(1)  # Pausar la ejecución por 1 segundo antes de volver a calcular
+        
+    # Una vez que el tiempo se agota, se limpia la variable y se reinicia la app
+    st.session_state.bloqueo_hasta = None
+    st.rerun()
+
 else:
-    # Sección de retiro
+    # Sección de retiro normal
     st.subheader("Transferir de Bóveda a Bolsillo")
     st.write("¿Seguro que quieres gastar tus ahorros?")
 
@@ -81,7 +94,7 @@ else:
         respuesta = st.text_input("Ingresa el valor numérico exacto de p:")
         
         if st.button("Verificar y Transferir"):
-            # La respuesta correcta es raiz(400) + 100 = 20 + 100 = 120
+            # La respuesta correcta es 120
             if respuesta == "120":
                 st.error("Respuesta correcta. Transferencia realizada. (Tus ahorros han disminuido).")
                 st.session_state.boveda -= monto
